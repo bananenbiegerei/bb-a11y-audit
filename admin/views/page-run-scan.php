@@ -5,9 +5,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $locations       = BB_A11y_Locations::get_all();
 $preselected_id  = isset( $_GET['location_id'] ) ? (int) $_GET['location_id'] : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$scan_profile    = BB_A11y_Scan_Config::get_profile();
+$scan_tags       = BB_A11y_Scan_Config::get_tags();
 ?>
 <div class="wrap bb-a11y-wrap">
 	<h1><?php esc_html_e( 'A11y Audit — Run Scan', 'bb-a11y-audit' ); ?></h1>
+
+	<p class="description">
+		<?php
+		echo esc_html(
+			sprintf(
+				/* translators: 1: profile slug, 2: comma-separated axe tags */
+				__( 'Active scan profile: %1$s (tags: %2$s).', 'bb-a11y-audit' ),
+				$scan_profile,
+				implode( ', ', $scan_tags )
+			)
+		);
+		?>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=bb-a11y-audit-settings' ) ); ?>">
+			<?php esc_html_e( 'Change in Settings', 'bb-a11y-audit' ); ?>
+		</a>
+	</p>
 
 	<h2><?php esc_html_e( 'Batch Scan', 'bb-a11y-audit' ); ?></h2>
 	<p>

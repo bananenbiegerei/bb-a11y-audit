@@ -28,6 +28,7 @@ class BB_A11y_Audit {
 		add_action( 'admin_init', array( 'BB_A11y_Activator', 'maybe_upgrade' ) );
 		add_action( 'admin_menu', array( $this->admin, 'register_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this->admin, 'enqueue_assets' ) );
+		add_action( 'admin_post_bb_a11y_save_settings', array( $this->admin, 'handle_settings_save' ) );
 		add_action( 'rest_api_init', array( $this->rest_controller, 'register_routes' ) );
 
 		$this->csv_export->register();

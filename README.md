@@ -7,7 +7,29 @@ In-admin accessibility auditing for WordPress, using [axe-core](https://github.c
 - WordPress 5.9+, PHP 7.4+
 - `manage_options` capability to use the plugin's admin pages (solo-admin tool, no custom roles)
 
-See the plan/architecture notes for the full design: browser-based iframe scanning (no headless/server-side runner), auto-suggested + manually curated Location list, plain CSS-selector scan scope, full scan history with Anmerkung carry-forward across re-scans, fixed WCAG 2.1 A+AA + best-practice rule scope.
+See the plan/architecture notes for the full design: browser-based iframe scanning (no headless/server-side runner), auto-suggested + manually curated Location list, plain CSS-selector scan scope, full scan history with Anmerkung carry-forward across re-scans, configurable WCAG-focused vs full (best-practice) rule profiles.
+
+## Scan profiles & estimate-aligned coverage
+
+**Settings → Scan profile**
+
+| Profile | Tags | Notes |
+|---|---|---|
+| **WCAG focused (default)** | `wcag2a`, `wcag2aa`, `wcag21aa` | Matches sold estimate-style audits. Landmark/region/heading-structure best-practice noise stays off. |
+| **Full** | above + `best-practice` | Previous behaviour (`region`, `landmark-*`, `heading-order`, …). |
+
+Open-source axe-core covers the usual estimate Rule IDs (`aria-required-children`, `aria-required-parent`, `link-name`, `image-alt`, `color-contrast`, `aria-progressbar-name`, `nested-interactive`, `autocomplete-valid`, `aria-allowed-attr`). Deque Pro’s `advanced/text-contrast` is **not** available; use `color-contrast` for WCAG 1.4.3.
+
+**Locations → Find Suggestions → Coverage checklist** resolves estimate template slugs (`header`, `footer`, `front-page`, `page-about-us`, `page-newsletter`, `page-faq`, `page-news`, `cart`, `single-product`, `single-projects`, `form-checkout`, `archive-press`, `archive-projects`, `archive`) against the live site. Header/footer get default CSS selectors so scans isolate those regions instead of duplicating the whole home page. Remap discovery with the `bb_a11y_coverage_targets` filter.
+
+### Re-running an estimate-comparable CSV
+
+1. Update/activate this plugin build on the target site.
+2. Confirm **A11y Audit → Settings** uses **WCAG focused**.
+3. **Locations → Find Suggestions** → add every **ready** coverage row (manually add any unresolved slug once the page/CPT exists).
+4. For existing `header` / `footer` rows without selectors, set Default Selector to `header, [role="banner"]` / `footer, [role="contentinfo"]` (or delete and re-add from coverage).
+5. **Run Scan → Scan Selected Locations** (batch).
+6. **Results → Export CSV** and compare Location + Rule ID columns to the estimate lines.
 
 ### Same-site only
 

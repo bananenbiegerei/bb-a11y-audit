@@ -47,6 +47,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<p><button class="button button-primary" id="bb-a11y-add-location"><?php esc_html_e( 'Add Location', 'bb-a11y-audit' ); ?></button></p>
 
 	<h2><?php esc_html_e( 'Auto-suggest from Templates', 'bb-a11y-audit' ); ?></h2>
+	<p class="description">
+		<?php esc_html_e( 'Includes an estimate-aligned coverage checklist (header/footer with selectors, Woo cart/checkout/product, named pages like page-about-us / page-news, CPT archives). Add every “ready” row before running a full scan so CSV Location values match the sold template names.', 'bb-a11y-audit' ); ?>
+	</p>
 	<p><button class="button" id="bb-a11y-fetch-suggestions"><?php esc_html_e( 'Find Suggestions', 'bb-a11y-audit' ); ?></button></p>
 	<div id="bb-a11y-suggestions"></div>
 </div>

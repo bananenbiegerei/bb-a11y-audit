@@ -4,7 +4,9 @@
 	var restUrl     = BBA11yData.restUrl;
 	var nonce       = BBA11yData.nonce;
 	var axeAssetUrl = BBA11yData.axeAssetUrl;
-	var defaultTags = BBA11yData.defaultTags;
+	var scanConfig  = BBA11yData.scanConfig || {};
+	var defaultTags = ( scanConfig.tags && scanConfig.tags.length ) ? scanConfig.tags : ( BBA11yData.defaultTags || [] );
+	var ruleOverrides = scanConfig.rules || {};
 
 	var iframe = document.getElementById( 'bb-a11y-scan-frame' );
 
@@ -70,7 +72,13 @@
 
 			script.onload = function () {
 				var context = selector ? { include: [ [ selector ] ] } : doc;
-				var options = { runOnly: { type: 'tag', values: defaultTags } };
+				var options = {
+					runOnly: { type: 'tag', values: defaultTags },
+				};
+
+				if ( ruleOverrides && Object.keys( ruleOverrides ).length ) {
+					options.rules = ruleOverrides;
+				}
 
 				iframe.contentWindow.axe
 					.run( context, options )

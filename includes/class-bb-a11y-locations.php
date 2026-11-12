@@ -105,16 +105,17 @@ class BB_A11y_Locations {
 	}
 
 	/**
-	 * Build categorized candidate Locations: fixed site landmarks, the active
-	 * theme's page templates (via get_page_templates()), and public CPTs.
+	 * Build categorized candidate Locations: estimate-style coverage checklist,
+	 * fixed site landmarks, the active theme's page templates, and public CPTs.
 	 * These are suggestions only -- nothing here is written to the database.
 	 *
-	 * @return array { special: [...], templates: [...], post_types: [...] }
+	 * @return array{coverage: array, special: array, templates: array, post_types: array}
 	 */
 	public static function suggest_locations() {
 		$existing_slugs = wp_list_pluck( self::get_all(), 'slug' );
 
 		return array(
+			'coverage'   => self::suggest_coverage_locations( $existing_slugs ),
 			'special'    => self::suggest_special_locations( $existing_slugs ),
 			'templates'  => self::discover_page_templates( $existing_slugs ),
 			'post_types' => self::discover_post_types( $existing_slugs ),
@@ -122,49 +123,66 @@ class BB_A11y_Locations {
 	}
 
 	/**
-	 * Fixed landmarks that have no page template or CPT of their own.
+	 * Estimate-aligned Location checklist (slug + URL discovery + optional selector).
+	 * Ready rows can be added in one click; unresolved rows explain the gap.
+	 *
+	 * @param string[] $existing_slugs
+	 * @return array<int, array<string, mixed>>
 	 */
-	private static function suggest_special_locations( $existing_slugs ) {
+	private static function suggest_coverage_locations( $existing_slugs ) {
 		$suggestions = array();
 
-		$add = function( $slug, $label, $url ) use ( &$suggestions, $existing_slugs ) {
-			if ( ! $url || in_array( $slug, $existing_slugs, true ) ) {
+		foreach ( BB_A11y_Scan_Config::get_coverage_targets() as $target ) {
+			$slug = $target['slug'];
+			if ( in_array( $slug, $existing_slugs, true ) ) {
+				continue;
+			}
+
+			$resolved = BB_A11y_Scan_Config::resolve_coverage_target( $target );
+
+			$suggestions[] = array(
+				'slug'             => $slug,
+				'label'            => $target['label'],
+				'url'              => $resolved['url'],
+				'default_selector' => isset( $target['default_selector'] ) ? $target['default_selector'] : '',
+				'rules'            => isset( $target['rules'] ) ? $target['rules'] : array(),
+				'status'           => $resolved['url'] ? 'ready' : 'unresolved',
+				'hint'             => $resolved['hint'],
+			);
+		}
+
+		return $suggestions;
+	}
+
+	/**
+	 * Fixed landmarks that have no page template or CPT of their own.
+	 * Skips slugs already offered (or present) via the coverage checklist so
+	 * the UI does not list header/cart/checkout twice.
+	 */
+	private static function suggest_special_locations( $existing_slugs ) {
+		$suggestions    = array();
+		$coverage_slugs = wp_list_pluck( BB_A11y_Scan_Config::get_coverage_targets(), 'slug' );
+
+		$add = function( $slug, $label, $url, $default_selector = '' ) use ( &$suggestions, $existing_slugs, $coverage_slugs ) {
+			if ( ! $url || in_array( $slug, $existing_slugs, true ) || in_array( $slug, $coverage_slugs, true ) ) {
 				return;
 			}
 			$suggestions[] = array(
-				'slug'  => $slug,
-				'label' => $label,
-				'url'   => $url,
+				'slug'             => $slug,
+				'label'            => $label,
+				'url'              => $url,
+				'default_selector' => $default_selector,
 			);
 		};
 
-		// Header / footer: no template of their own, heuristic pick of the homepage.
-		$add( 'header', 'Header', home_url( '/' ) );
-		$add( 'footer', 'Footer', home_url( '/' ) );
-
-		// Home / front page, based on the reading settings.
+		// Home / blog index when distinct from front-page coverage target.
 		if ( 'page' === get_option( 'show_on_front' ) ) {
-			$front_id = (int) get_option( 'page_on_front' );
-			if ( $front_id ) {
-				$add( 'front-page', 'Front Page', get_permalink( $front_id ) );
-			}
 			$posts_id = (int) get_option( 'page_for_posts' );
 			if ( $posts_id ) {
-				$add( 'home', 'Blog Home', get_permalink( $posts_id ) );
+				$add( 'home', __( 'Blog Home', 'bb-a11y-audit' ), get_permalink( $posts_id ) );
 			}
 		} else {
-			$add( 'home', 'Home', home_url( '/' ) );
-		}
-
-		// WooCommerce special-cased fixed endpoints.
-		if ( function_exists( 'wc_get_cart_url' ) ) {
-			$add( 'cart', 'Cart', wc_get_cart_url() );
-		}
-		if ( function_exists( 'wc_get_page_id' ) ) {
-			$checkout_id = wc_get_page_id( 'checkout' );
-			if ( $checkout_id && $checkout_id > 0 ) {
-				$add( 'form-checkout', 'Checkout', get_permalink( $checkout_id ) );
-			}
+			$add( 'home', __( 'Home', 'bb-a11y-audit' ), home_url( '/' ) );
 		}
 
 		return $suggestions;

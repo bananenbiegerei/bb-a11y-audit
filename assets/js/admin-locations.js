@@ -29,7 +29,7 @@
 	function renderLocations( locations ) {
 		var body = document.getElementById( 'bb-a11y-locations-body' );
 		if ( ! locations.length ) {
-			body.innerHTML = '<tr><td colspan="5">No locations yet. Add one below or use Auto-suggest.</td></tr>';
+			body.innerHTML = '<tr><td colspan="5">No locations yet. Add one below or use Auto-suggest / Coverage checklist.</td></tr>';
 			return;
 		}
 
@@ -67,31 +67,78 @@
 
 	function renderSuggestions( data ) {
 		var container  = document.getElementById( 'bb-a11y-suggestions' );
+		var coverage   = data.coverage || [];
 		var special    = data.special || [];
 		var templates  = data.templates || [];
 		var postTypes  = data.post_types || [];
 
-		if ( ! special.length && ! templates.length && ! postTypes.length ) {
+		if ( ! coverage.length && ! special.length && ! templates.length && ! postTypes.length ) {
 			container.innerHTML = '<p>No suggestions — every detected template/post type already has a location.</p>';
 			return;
 		}
 
 		var selectable = [];
 
-		function checkboxRow( entry, extraLabel ) {
+		function checkboxRow( entry, extraLabel, opts ) {
+			opts = opts || {};
+			var disabled = !! opts.disabled;
 			var index = selectable.length;
-			selectable.push( { slug: entry.slug, label: entry.label, url: entry.url } );
+			if ( ! disabled ) {
+				selectable.push( {
+					slug: entry.slug,
+					label: entry.label,
+					url: entry.url,
+					default_selector: entry.default_selector || '',
+				} );
+			}
+
+			var checkCell = disabled
+				? '<td></td>'
+				: '<td><input type="checkbox" class="bb-a11y-suggestion-check" data-index="' + index + '" checked /></td>';
+
+			var rules = ( entry.rules && entry.rules.length )
+				? ' <span class="description">[' + escapeHtml( entry.rules.join( ', ' ) ) + ']</span>'
+				: '';
+
+			var hint = entry.hint
+				? '<br /><span class="description">' + escapeHtml( entry.hint ) + '</span>'
+				: '';
+
+			var statusBadge = '';
+			if ( entry.status === 'unresolved' ) {
+				statusBadge = ' <strong style="color:#b32d2e;">unresolved</strong>';
+			} else if ( entry.status === 'ready' ) {
+				statusBadge = ' <strong style="color:#007017;">ready</strong>';
+			}
+
 			return (
 				'<tr>' +
-				'<td><input type="checkbox" class="bb-a11y-suggestion-check" data-index="' + index + '" checked /></td>' +
-				'<td>' + escapeHtml( entry.slug ) + '</td>' +
-				'<td>' + escapeHtml( entry.label ) + ( extraLabel ? ' <span class="description">(' + escapeHtml( extraLabel ) + ')</span>' : '' ) + '</td>' +
-				'<td><a href="' + escapeHtml( entry.url ) + '" target="_blank" rel="noopener">' + escapeHtml( entry.url ) + '</a></td>' +
+				checkCell +
+				'<td>' + escapeHtml( entry.slug ) + statusBadge + '</td>' +
+				'<td>' + escapeHtml( entry.label ) + ( extraLabel ? ' <span class="description">(' + escapeHtml( extraLabel ) + ')</span>' : '' ) + rules + hint + '</td>' +
+				'<td>' + ( entry.url
+					? '<a href="' + escapeHtml( entry.url ) + '" target="_blank" rel="noopener">' + escapeHtml( entry.url ) + '</a>'
+					: '<em>—</em>' ) +
+				( entry.default_selector ? '<br /><code>' + escapeHtml( entry.default_selector ) + '</code>' : '' ) +
+				'</td>' +
 				'</tr>'
 			);
 		}
 
 		var html = '';
+
+		if ( coverage.length ) {
+			html +=
+				'<h3>Coverage checklist (estimate-aligned Location slugs)</h3>' +
+				'<p class="description">Add every <strong>ready</strong> row so CSV Location values match estimate template names (header, page-about-us, cart, form-checkout, …). Unresolved rows need a published page/CPT or a manual Location.</p>' +
+				'<table class="widefat striped"><thead><tr><th></th><th>Slug</th><th>Label / expected rules</th><th>URL / selector</th></tr></thead><tbody>' +
+				coverage
+					.map( function ( entry ) {
+						return checkboxRow( entry, null, { disabled: entry.status !== 'ready' } );
+					} )
+					.join( '' ) +
+				'</tbody></table>';
+		}
 
 		if ( special.length ) {
 			html +=
